@@ -25,3 +25,15 @@ target remote localhost:1234
 
 echo + symbol-file kernel\n
 symbol-file kernel
+
+echo + add-symbol-file bootblock.o 0x7c00\n
+add-symbol-file bootblock.o 0x7c00
+
+echo Execution is currently paused, type "continue" to start executing.\n
+echo Ctrl-C pauses execution again. \ 
+echo "break" sets breakpoints. \n
+echo "step" and "stepi" advance by one line or instruction. \n
+echo "next" is like "step" but treats subroutines as single instructions. \n
+echo "print" evaluates and prints c expressions. \n
+echo Type "help" followed by command name for full documentation, \ 
+echo or "help" for all commands.\n
