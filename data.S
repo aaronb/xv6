@@ -21,6 +21,7 @@
 
 .data
 .globl data
+.align 4096
 data:
   .word 1
 
