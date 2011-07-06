@@ -98,6 +98,7 @@ extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
 
+// array of function pointers to handlers for all the syscalls
 static int (*syscalls[])(void) = {
 [SYS_chdir]   sys_chdir,
 [SYS_close]   sys_close,
@@ -122,15 +123,17 @@ static int (*syscalls[])(void) = {
 [SYS_uptime]  sys_uptime,
 };
 
+// Called on a syscall trap. Checks that the syscall number (passed via eax)
+// is valid and then calls the appropriate handler for the syscall.
 void
 syscall(void)
 {
   int num;
   
   num = proc->tf->eax;
-  if(num > 0 && num < NELEM(syscalls) && syscalls[num])
+  if(num > 0 && num < NELEM(syscalls) && syscalls[num] != NULL) {
     proc->tf->eax = syscalls[num]();
-  else {
+  } else {
     cprintf("%d %s: unknown sys call %d\n",
             proc->pid, proc->name, num);
     proc->tf->eax = -1;
