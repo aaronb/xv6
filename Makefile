@@ -49,23 +49,23 @@ ULIB = \
 
 # user programs
 UPROGS = \
-	_cat\
-	_echo\
-	_forktest\
-	_grep\
-	_init\
-	_kill\
-	_ln\
-	_ls\
-	_mkdir\
-	_rm\
-	_sh\
-	_stressfs\
-	_usertests\
-	_wc\
-	_zombie\
+	cat\
+	echo\
+	forktest\
+	grep\
+	init\
+	kill\
+	ln\
+	ls\
+	mkdir\
+	rm\
+	sh\
+	stressfs\
+	usertests\
+	wc\
+	zombie\
 
-UOBJS = $(UPROGS:_%=%.o)
+UOBJS = $(UPROGS:%=%.o)
 
 
 ################################################################################
@@ -113,12 +113,16 @@ CFLAGS += -fno-stack-protector
 
 # enable optimizations. improves performance, but may make debugging more 
 # difficult
-CFLAGS += -O2
+#CFLAGS += -O2
 
-CFLAGS += -Wall # enable extra warnings
-CFLAGS += -Werror # treat warnings as errors
-CFLAGS += -m32 # generate code for 32-bit environment
-CFLAGS += -ggdb	# produce debugging information for use by gdb
+# enable extra warnings
+CFLAGS += -Wall
+# treat warnings as errors
+CFLAGS += -Werror
+# generate code for 32-bit environment
+CFLAGS += -m32
+# produce debugging information for use by gdb
+CFLAGS += -ggdb
 
 
 # Assembler options
@@ -187,15 +191,15 @@ clean:
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg *.d \
 	*.o *.asm *.sym vectors.S parport.out \
 	bootblock bootother bootother.out initcode initcode.out kernel \
-	xv6.img fs.img mkfs \
-	$(UPROGS)
+	xv6.img fs.img mkfs
+	rm -rf fs
 	rm -rf fmt
 
 distclean: clean
 	rm -f TAGS xv6.pdf xv6.ps .gdbinit .bochsrc
 
 tags: TAGS
-TAGS: $(OBJS) bootother.S _init
+TAGS: $(OBJS) bootother.S init.o
 	etags *.S *.c
 
 dvi:
@@ -266,8 +270,13 @@ vectors.S: vectors.pl
 %.d: %.S
 	$(AS) $(ASFLAGS) -M -MG $< -MF $@ -MT $@ -MT $(<:.S=.o)
 
-_%: %.o $(ULIB)
-	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
+fs/%: %.o $(ULIB)
+	@mkdir -p fs
+	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $< $(ULIB)
+
+fs/%: %
+	@mkdir -p fs
+	cp $< $@
 
 %.asm: %.o
 	$(OBJDUMP) -S $< > $@
@@ -275,17 +284,18 @@ _%: %.o $(ULIB)
 %.sym: %.o
 	$(OBJDUMP) -t $< | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $@
 
-_forktest: forktest.o $(ULIB)
-	# forktest has less library code linked in - needs to be small
-	# in order to be able to max out the proc table.
-	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o _forktest forktest.o ulib.o \
+fs/forktest: forktest.o $(ULIB)
+	@mkdir -p fs
+	@# forktest has less library code linked in - needs to be small
+	@# in order to be able to max out the proc table.
+	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ forktest.o ulib.o \
 		usys.o
 
 mkfs: mkfs.c fs.h
-	gcc -m32 -Werror -Wall -o mkfs mkfs.c
+	gcc -m32 -Werror -ggdb -Wall -o mkfs mkfs.c
 
-fs.img: mkfs README $(UPROGS)
-	./mkfs fs.img README $(UPROGS)
+fs.img: mkfs fs/README $(addprefix fs/,$(UPROGS))
+	./mkfs fs.img fs
 
 DEPS = $(OBJS:.o=.d) $(ULIB:.o=.d) $(UOBJS:.o=.d)
 

@@ -1,14 +1,23 @@
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <dirent.h>
+#include <stdbool.h>
 
 #define stat xv6_stat  // avoid clash with host struct stat
+#define dirent xv6_dirent  // avoid clash with host struct stat
 #include "types.h"
 #include "fs.h"
 #include "stat.h"
+#undef stat
+#undef dirent
+
+#define BLOCK_SIZE (512)
 
 int nblocks = 995;
 int ninodes = 200;
@@ -21,6 +30,7 @@ uint freeblock;
 uint usedblocks;
 uint bitblocks;
 uint freeinode = 1;
+uint root_inode;
 
 void balloc(int);
 void wsect(uint, void*);
@@ -53,28 +63,12 @@ xint(uint x)
   return y;
 }
 
-int
-main(int argc, char *argv[])
-{
-  int i, cc, fd;
-  uint rootino, inum, off;
-  struct dirent de;
-  char buf[512];
-  struct dinode din;
 
-  if(argc < 2){
-    fprintf(stderr, "Usage: mkfs fs.img files...\n");
-    exit(1);
-  }
+int 
+mkfs(int nblocks, int ninodes, int size) {
 
-  assert((512 % sizeof(struct dinode)) == 0);
-  assert((512 % sizeof(struct dirent)) == 0);
-
-  fsfd = open(argv[1], O_RDWR|O_CREAT|O_TRUNC, 0666);
-  if(fsfd < 0){
-    perror(argv[1]);
-    exit(1);
-  }
+  int i;
+  char buf[BLOCK_SIZE];
 
   sb.size = xint(size);
   sb.nblocks = xint(nblocks); // so whole disk is size sectors
@@ -96,53 +90,144 @@ main(int argc, char *argv[])
   memmove(buf, &sb, sizeof(sb));
   wsect(1, buf);
 
-  rootino = ialloc(T_DIR);
-  assert(rootino == ROOTINO);
 
-  bzero(&de, sizeof(de));
-  de.inum = xshort(rootino);
-  strcpy(de.name, ".");
-  iappend(rootino, &de, sizeof(de));
+  return 0;
+}
 
-  bzero(&de, sizeof(de));
-  de.inum = xshort(rootino);
-  strcpy(de.name, "..");
-  iappend(rootino, &de, sizeof(de));
+int
+add_dir(DIR *cur_dir, int cur_inode, int parent_inode) {
+	int r;
+	int child_inode;
+	int cur_fd, child_fd;
+	struct xv6_dirent de;
+	struct dinode din;
+	struct dirent dir_buf;
+	struct dirent *entry;
+	struct stat st;
+	int bytes_read;
+	char buf[BLOCK_SIZE];
+	int off;
 
-  for(i = 2; i < argc; i++){
-    assert(index(argv[i], '/') == 0);
+	bzero(&de, sizeof(de));
+	de.inum = xshort(cur_inode);
+	strcpy(de.name, ".");
+	iappend(cur_inode, &de, sizeof(de));
 
-    if((fd = open(argv[i], 0)) < 0){
-      perror(argv[i]);
-      exit(1);
-    }
-    
-    // Skip leading _ in name when writing to file system.
-    // The binaries are named _rm, _cat, etc. to keep the
-    // build operating system from trying to execute them
-    // in place of system binaries like rm and cat.
-    if(argv[i][0] == '_')
-      ++argv[i];
+	bzero(&de, sizeof(de));
+	de.inum = xshort(parent_inode);
+	strcpy(de.name, "..");
+	iappend(cur_inode, &de, sizeof(de));
 
-    inum = ialloc(T_FILE);
+	if (cur_dir == NULL) {
+		return 0;
+	}
 
-    bzero(&de, sizeof(de));
-    de.inum = xshort(inum);
-    strncpy(de.name, argv[i], DIRSIZ);
-    iappend(rootino, &de, sizeof(de));
+	cur_fd = dirfd(cur_dir);
+	if (cur_fd == -1){
+		perror("add_dir");
+		exit(EXIT_FAILURE);
+	}
 
-    while((cc = read(fd, buf, sizeof(buf))) > 0)
-      iappend(inum, buf, cc);
+	if (fchdir(cur_fd) != 0){
+		perror("add_dir");
+		return -1;
+	}
 
-    close(fd);
+	while (true) {
+		r = readdir_r(cur_dir, &dir_buf, &entry);
+
+		if (r != 0) {
+			perror("add_dir");
+			return -1;
+		}
+
+		if (entry == NULL)
+			break;
+
+		if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+			continue;
+
+		printf("%s\n", entry->d_name);
+
+		child_fd = open(entry->d_name, O_RDONLY);
+		if (child_fd == -1) {
+			perror("open");
+			return -1;
+		}
+
+		r = fstat(child_fd, &st);
+		if (r != 0) {
+			perror("stat");
+			return -1;
+		}
+
+		if (S_ISDIR(st.st_mode)) {
+      child_inode = ialloc(T_DIR);
+			r = add_dir(fdopendir(child_fd), child_inode, cur_inode);
+			if (r != 0) return r;
+			if (fchdir(cur_fd) != 0) {
+				perror("chdir");
+				return -1;
+			}
+		} else {
+			bytes_read = 0;
+	  		child_inode = ialloc(T_FILE);
+			bzero(&de, sizeof(de));
+			while((bytes_read = read(child_fd, buf, sizeof(buf))) > 0) {
+				iappend(child_inode, buf, bytes_read);
+			}
+		}
+		close(child_fd);
+
+		de.inum = xshort(child_inode);
+		strncpy(de.name, entry->d_name, DIRSIZ);
+		iappend(cur_inode, &de, sizeof(de));
+
+	}
+
+	// fix size of inode cur_dir
+	rinode(cur_inode, &din);
+	off = xint(din.size);
+	off = ((off/BSIZE) + 1) * BSIZE;
+	din.size = xint(off);
+	winode(cur_inode, &din);
+	return 0;
+}
+
+
+
+
+int
+main(int argc, char *argv[])
+{
+  int r;
+  DIR *root_dir;
+
+  if(argc < 2){
+    fprintf(stderr, "Usage: mkfs fs.img files...\n");
+    exit(1);
   }
 
-  // fix size of root inode dir
-  rinode(rootino, &din);
-  off = xint(din.size);
-  off = ((off/BSIZE) + 1) * BSIZE;
-  din.size = xint(off);
-  winode(rootino, &din);
+  assert((512 % sizeof(struct dinode)) == 0);
+  assert((512 % sizeof(struct xv6_dirent)) == 0);
+
+  fsfd = open(argv[1], O_RDWR|O_CREAT|O_TRUNC, 0666);
+  if(fsfd < 0){
+    perror(argv[1]);
+    exit(1);
+  }
+
+  mkfs(995, 200, 1024);
+
+  root_dir = opendir(argv[2]);
+
+  root_inode = ialloc(T_DIR);
+  assert(root_inode == ROOTINO);
+
+  r = add_dir(root_dir, root_inode, root_inode);
+  if (r != 0) {
+    exit(EXIT_FAILURE);
+  }
 
   balloc(usedblocks);
 
