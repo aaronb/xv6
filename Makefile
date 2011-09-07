@@ -292,7 +292,7 @@ fs/forktest: forktest.o $(ULIB)
 		usys.o
 
 mkfs: mkfs.c fs.h
-	gcc -m32 -Werror -ggdb -Wall -o mkfs mkfs.c
+	gcc -Werror -ggdb -Wall -o mkfs mkfs.c
 
 fs.img: mkfs fs/README $(addprefix fs/,$(UPROGS))
 	./mkfs fs.img fs
