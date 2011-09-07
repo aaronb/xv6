@@ -145,7 +145,7 @@ OBJDUMP = $(TOOLPREFIX)objdump
 ################################################################################
 
 # If the makefile can't find QEMU, specify its path here
-#QEMU = 
+QEMU = ~cs537-1/ta/tools/qemu
 
 # Try to infer the correct QEMU if not specified
 ifndef QEMU
