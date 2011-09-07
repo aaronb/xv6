@@ -38,7 +38,7 @@ OBJS = \
 	trap.o\
 	uart.o\
 	vectors.o\
-	vm.o\
+	vm.o
 
 # user library files
 ULIB = \
@@ -63,10 +63,11 @@ UPROGS = \
 	stressfs\
 	usertests\
 	wc\
-	zombie\
+	zombie
 
 UOBJS = $(UPROGS:%=%.o)
 
+DEPS = $(OBJS:.o=.d) $(ULIB:.o=.d) $(UOBJS:.o=.d)
 
 ################################################################################
 # Compiler Options
@@ -111,8 +112,8 @@ CFLAGS += -fno-strict-aliasing
 # disable stack smashing check
 CFLAGS += -fno-stack-protector
 
-# enable optimizations. improves performance, but may make debugging more 
-# difficult
+# uncomment to enable optimizations. improves performance, but may make 
+# debugging more difficult
 #CFLAGS += -O2
 
 # enable extra warnings
@@ -161,7 +162,6 @@ QEMU = $(shell if which qemu > /dev/null; \
 	echo "***" 1>&2; exit 1)
 endif
 
-
 # try to generate a unique GDB port
 GDBPORT = $(shell expr `id -u` % 5000 + 25000)
 
@@ -183,7 +183,7 @@ QEMUOPTS = -hdb fs.img xv6.img -smp $(CPUS)
 ################################################################################
 
 .PHONY: all clean distclean tags dvi html pdf ps \
-	run qemu qemu-nox qemu-gdb qemu-nox-gdb bochs
+	run qemu qemu-nox qemu-gdb qemu-nox-gdb bochs depend
 
 all: xv6.img fs.img
 
@@ -226,10 +226,15 @@ qemu-nox-gdb: fs.img xv6.img .gdbinit
 bochs: fs.img xv6.img .bochsrc
 	bochs -q
 
+depend: $(DEPS)
 
 ################################################################################
 # Build Recipies
 ################################################################################
+
+# include dependency files (make will automatically build them if they are 
+# out of date)
+-include $(DEPS)
 
 xv6.img: bootblock kernel
 	dd if=/dev/zero of=xv6.img count=10000
@@ -261,15 +266,18 @@ kernel: $(OBJS) multiboot.o data.o bootother initcode
 vectors.S: vectors.pl
 	perl vectors.pl > vectors.S
 
+# default recipe for object files
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+# default recipes for dependency files
 %.d: %.c
 	$(CC) $(CFLAGS) -M -MG $< -MF $@ -MT $@ -MT $(<:.c=.o)
 
 %.d: %.S
 	$(AS) $(ASFLAGS) -M -MG $< -MF $@ -MT $@ -MT $(<:.S=.o)
 
+# user programs
 fs/%: %.o $(ULIB)
 	@mkdir -p fs
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $< $(ULIB)
@@ -291,19 +299,12 @@ fs/forktest: forktest.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ forktest.o ulib.o \
 		usys.o
 
+# mkfs is run on the host machine, not inside the emulator
 mkfs: mkfs.c fs.h
 	gcc -Werror -ggdb -Wall -o mkfs mkfs.c
 
 fs.img: mkfs fs/README $(addprefix fs/,$(UPROGS))
 	./mkfs fs.img fs
-
-DEPS = $(OBJS:.o=.d) $(ULIB:.o=.d) $(UOBJS:.o=.d)
-
-.PHONY: depend
-depend: $(DEPS)
-
-# include dependency files
-include $(DEPS)
 
 # make a printout
 FILES = $(shell grep -v '^\#' runoff.list)
