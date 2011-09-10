@@ -61,6 +61,7 @@ UPROGS = \
 	rm\
 	sh\
 	stressfs\
+	tester\
 	usertests\
 	wc\
 	zombie
