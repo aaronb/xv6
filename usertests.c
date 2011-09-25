@@ -6,6 +6,9 @@
 #include "syscall.h"
 #include "traps.h"
 
+#define PAGE (4096)
+#define MAX_PROC_MEM (640 * 1024)
+
 char buf[2048];
 char name[3];
 char *echoargv[] = { "echo", "ALL", "TESTS", "PASSED", 0 };
@@ -1346,8 +1349,8 @@ sbrktest(void)
   }
   for(i = 0; i < sizeof(pids)/sizeof(pids[0]); i++){
     if((pids[i] = fork()) == 0){
-      // allocate the full 640K
-      sbrk((640 * 1024) - (uint)sbrk(0));
+      // allocate the full 640K - 1 page
+      sbrk(MAX_PROC_MEM - (1 * PAGE) - (uint)sbrk(0));
       write(fds[1], "x", 1);
       // sit around until killed
       for(;;) sleep(1000);
@@ -1355,9 +1358,25 @@ sbrktest(void)
     if(pids[i] != -1)
       read(fds[0], &scratch, 1);
   }
+  kill(pids[0]);
+  wait();
+  if((pids[0] = fork()) == 0){
+     // allocate the full 640K page
+     sbrk(MAX_PROC_MEM - (uint)sbrk(0));
+     write(fds[1], "x", 1);
+     // sit around until killed
+     for(;;) sleep(1000);
+    }
+  if(pids[0] != -1) {
+     read(fds[0], &scratch, 1);
+  } else {
+     printf(1, "fork failed\n");
+     exit();
+  }
+
   // if those failed allocations freed up the pages they did allocate,
   // we'll be able to allocate here
-  c = sbrk(4096);
+  c = sbrk(PAGE);
   for(i = 0; i < sizeof(pids)/sizeof(pids[0]); i++){
     if(pids[i] == -1)
       continue;
