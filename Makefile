@@ -4,6 +4,8 @@
 # to run miscellaneous commands when explicitly asked (for example, to run an
 # emulator after building the correct filesystem image, or to remove certain 
 # files as a clean-up operation). 
+#
+# http://www.gnu.org/software/make/manual/
 
 
 ################################################################################
@@ -97,6 +99,7 @@ TOOLPREFIX := $(shell if i386-jos-elf-objdump -i 2>&1 | grep '^elf32-i386$$' >/d
 endif
 
 # C compiler options
+# http://gcc.gnu.org/onlinedocs/gcc-4.4.6/gcc/Invoking-GCC.html
 CC = $(TOOLPREFIX)gcc
 CFLAGS =
 
@@ -128,14 +131,27 @@ CFLAGS += -ggdb
 
 
 # Assembler options
+# http://sourceware.org/binutils/docs/as/Invoking.html
 AS = $(TOOLPREFIX)gcc
 ASFLAGS = -m32 # generate code for 32-bit environment
 ASFLAGS += -ggdb # produce debugging information for use by gdb
 
-# Linker
+
+# Linker options
+# http://sourceware.org/binutils/docs/ld/Options.html
 LD = $(TOOLPREFIX)ld
+
 # FreeBSD ld wants ``elf_i386_fbsd''
 LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null)
+
+# linkner flags for xv6 user programs
+# use simple contiguous section layout and do not use dynamic linking
+LDUSER += --omagic
+# where program execution should begin
+LDUSER += --entry=main
+# location in memory where the program will be loaded
+LDUSER += --section-start=.text=0x0
+
 
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
@@ -245,24 +261,26 @@ xv6.img: bootblock kernel
 bootblock: bootasm.S bootmain.c
 	$(CC) $(CFLAGS) -fno-pic -O -nostdinc -I. -c bootmain.c
 	$(CC) $(CFLAGS) -fno-pic -nostdinc -I. -c bootasm.S
-	$(LD) $(LDFLAGS) -N -e start -Ttext 0x7C00 -o bootblock.o bootasm.o \
-		bootmain.o
+	$(LD) $(LDFLAGS) --omagic --entry=start --section-start=.text=0x7C00 \
+		-o bootblock.o bootasm.o bootmain.o
 	$(OBJCOPY) -S -O binary -j .text bootblock.o bootblock
 	./sign.pl bootblock
 
 bootother: bootother.S
 	$(CC) $(CFLAGS) -nostdinc -I. -c bootother.S
-	$(LD) $(LDFLAGS) -N -e start -Ttext 0x7000 -o bootother.out bootother.o
+	$(LD) $(LDFLAGS) --omagic --entry=start --section-start=.text=0x7000 \
+		-o bootother.out bootother.o
 	$(OBJCOPY) -S -O binary bootother.out bootother
 
 initcode: initcode.S
 	$(CC) $(CFLAGS) -nostdinc -I. -c initcode.S
-	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o initcode.out initcode.o
+	$(LD) $(LDFLAGS) --omagic --entry=start --section-start=.text=0x0 \
+		--output=initcode.out initcode.o
 	$(OBJCOPY) -S -O binary initcode.out initcode
 
 kernel: $(OBJS) multiboot.o data.o bootother initcode
-	$(LD) $(LDFLAGS) -Ttext 0x100000 -e main -o kernel multiboot.o data.o \
-		$(OBJS) -b binary initcode bootother
+	$(LD) $(LDFLAGS) --section-start=.text=0x100000 --entry=main -o kernel \
+		multiboot.o data.o $(OBJS) -b binary initcode bootother
 
 vectors.S: vectors.pl
 	perl vectors.pl > vectors.S
@@ -281,7 +299,7 @@ vectors.S: vectors.pl
 # user programs
 fs/%: %.o $(ULIB)
 	@mkdir -p fs
-	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $< $(ULIB)
+	$(LD) $(LDFLAGS) $(LDUSER) --output=$@ $< $(ULIB)
 
 fs/%: %
 	@mkdir -p fs
@@ -293,12 +311,11 @@ fs/%: %
 %.sym: %.o
 	$(OBJDUMP) -t $< | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $@
 
+# forktest has less library code linked in - needs to be small
+# in order to be able to max out the proc table.
 fs/forktest: forktest.o $(ULIB)
 	@mkdir -p fs
-	@# forktest has less library code linked in - needs to be small
-	@# in order to be able to max out the proc table.
-	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ forktest.o ulib.o \
-		usys.o
+	$(LD) $(LDFLAGS) $(LDUSER) --output=$@ forktest.o ulib.o usys.o
 
 # mkfs is run on the host machine, not inside the emulator
 mkfs: mkfs.c fs.h
