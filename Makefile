@@ -162,14 +162,14 @@ OBJDUMP = $(TOOLPREFIX)objdump
 ################################################################################
 
 # If the makefile can't find QEMU, specify its path here
-QEMU = ~cs537-1/ta/tools/qemu
+#QEMU =
 
 # Try to infer the correct QEMU if not specified
 ifndef QEMU
 QEMU = $(shell if which qemu > /dev/null; \
 	then echo qemu; exit; \
 	else \
-	qemu=/Applications/Q.app/Contents/MacOS/i386-softmmu.app/Contents/MacOS/i386-softmmu; \
+	qemu=/u/c/s/cs537-1/ta/tools/qemu; \
 	if test -x $$qemu; then echo $$qemu; exit; fi; fi; \
 	echo "***" 1>&2; \
 	echo "*** Error: Couldn't find a working QEMU executable." 1>&2; \
