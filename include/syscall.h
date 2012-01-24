@@ -21,26 +21,3 @@
 #define SYS_sleep  20
 #define SYS_uptime 21
 
-#if (!__ASSEMBLER__)
-int sys_chdir(void);
-int sys_close(void);
-int sys_dup(void);
-int sys_exec(void);
-int sys_exit(void);
-int sys_fork(void);
-int sys_fstat(void);
-int sys_getpid(void);
-int sys_kill(void);
-int sys_link(void);
-int sys_mkdir(void);
-int sys_mknod(void);
-int sys_open(void);
-int sys_pipe(void);
-int sys_read(void);
-int sys_sbrk(void);
-int sys_sleep(void);
-int sys_unlink(void);
-int sys_wait(void);
-int sys_write(void);
-int sys_uptime(void);
-#endif // !__ASSEMBLER__
