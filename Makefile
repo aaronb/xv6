@@ -70,16 +70,11 @@ clean:
 	rm -rf $(CLEAN)
 
 distclean: clean
-	rm -f TAGS xv6.pdf xv6.ps .gdbinit .bochsrc
+	rm -f TAGS .gdbinit .bochsrc
 
 tags: TAGS
 TAGS: $(OBJS) bootother.S init.o
 	etags *.S *.c
-
-dvi:
-html:
-pdf: xv6.pdf
-ps: xv6.ps
 
 run: qemu
 
@@ -125,16 +120,8 @@ fs/README: README | fs
 	cp $< $@
 
 USER_BINS := $(notdir $(USER_PROGS))
-fs.img: tools/mkfs fs/README $(addprefix fs/,$(USER_BINS)) | fs
+fs.img: tools/mkfs fs/README $(addprefix fs/,$(USER_BINS))
 	./tools/mkfs fs.img fs
-
-# make a printout
-FILES = $(shell grep -v '^\#' runoff.list)
-PRINT = runoff.list runoff.spec $(FILES)
-
-xv6.pdf xv6.ps: $(PRINT)
-	./runoff
-	ls -l xv6.pdf
 
 .gdbinit: tools/dot-gdbinit
 	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@

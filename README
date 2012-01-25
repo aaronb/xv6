@@ -46,5 +46,3 @@ Bochs makes debugging easier, but QEMU is much faster.
 To run in Bochs, run "make bochs" and then type "c" at the bochs prompt.
 To run in QEMU, run "make qemu".
 
-To create a typeset version of the code, run "make xv6.pdf".  This
-requires the "mpage" utility.  See http://www.mesa.nl/pub/mpage/.
