@@ -93,7 +93,7 @@ include user/makefile.mk
 include tools/makefile.mk
 DEPS := $(KERNEL_DEPS) $(USER_DEPS) $(TOOLS_DEPS)
 CLEAN := $(KERNEL_CLEAN) $(USER_CLEAN) $(TOOLS_CLEAN) \
-	fs fs.img .gdbinit .bochsrc
+	fs fs.img .gdbinit .bochsrc dist
 
 .PHONY: clean distclean run depend qemu qemu-nox qemu-gdb qemu-nox-gdb bochs
 
@@ -131,6 +131,14 @@ bochs: fs.img xv6.img .bochsrc
 
 # generate dependency files
 depend: $(DEPS)
+
+dist: clean
+	mkdir -p dist/xv6
+	cp -r include kernel tools user FILES Makefile README .gitignore dist/xv6/
+	cd dist && tar -czf xv6.tar.gz xv6
+	mv dist/xv6.tar.gz .
+	rm -rf dist
+
 
 ################################################################################
 # Build Recipies
