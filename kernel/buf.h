@@ -1,3 +1,6 @@
+#ifndef _BUF_H_
+#define _BUF_H_
+// IO Buffer
 struct buf {
   int flags;
   uint dev;
@@ -11,3 +14,4 @@ struct buf {
 #define B_VALID 0x2  // buffer has been read from disk
 #define B_DIRTY 0x4  // buffer needs to be written to disk
 
+#endif // _BUF_H_

@@ -105,20 +105,24 @@ run: qemu
 
 # run xv6 in qemu
 qemu: fs.img xv6.img
+	@echo Ctrl+h for help
 	$(QEMU) -serial mon:stdio $(QEMUOPTS)
 
 # run xv6 in qemu without a display (serial only)
 qemu-nox: fs.img xv6.img
+	@echo Ctrl+a h for help
 	$(QEMU) -nographic $(QEMUOPTS)
 
 # run xv6 in qemu in debug mode
 qemu-gdb: fs.img xv6.img .gdbinit
 	@echo "Now run 'gdb' from another terminal." 1>&2
+	@echo Ctrl+a h for help
 	$(QEMU) -serial mon:stdio $(QEMUOPTS) -S $(QEMUGDB)
 
 # run xv6 in qemu without a display (serial only) in debug mode
 qemu-nox-gdb: fs.img xv6.img .gdbinit
 	@echo "Now run 'gdb' from another terminal." 1>&2
+	@echo Ctrl+a h for help
 	$(QEMU) -nographic $(QEMUOPTS) -S $(QEMUGDB)
 
 # run xv6 in bochs

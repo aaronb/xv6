@@ -1,3 +1,6 @@
+#ifndef _DEFS_H_
+#define _DEFS_H_
+
 struct buf;
 struct context;
 struct file;
@@ -168,3 +171,5 @@ int             copyout(pde_t*, uint, void*, uint);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
+
+#endif // _DEFS_H_

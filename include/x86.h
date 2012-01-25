@@ -1,3 +1,5 @@
+#ifndef _X86_H_
+#define _X86_H_
 // Routines to let C code use special x86 instructions.
 
 static inline uchar
@@ -128,7 +130,7 @@ static inline uint
 xchg(volatile uint *addr, uint newval)
 {
   uint result;
-  
+
   // The + in "+m" denotes a read-modify-write operand.
   asm volatile("lock; xchgl %0, %1" :
                "+m" (*addr), "=a" (result) :
@@ -160,7 +162,7 @@ rcr2(void)
 }
 
 static inline void
-lcr3(uint val) 
+lcr3(uint val)
 {
   asm volatile("movl %0,%%cr3" : : "r" (val));
 }
@@ -209,3 +211,5 @@ struct trapframe {
   ushort ss;
   ushort padding6;
 };
+
+#endif // _X86_H_

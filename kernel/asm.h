@@ -1,6 +1,6 @@
-//
+#ifndef _ASM_H_
+#define _ASM_H_
 // assembler macros to create x86 segments
-//
 
 #define SEG_NULLASM                                             \
         .word 0, 0;                                             \
@@ -19,3 +19,5 @@
 #define STA_W     0x2       // Writeable (non-executable segments)
 #define STA_R     0x2       // Readable (executable segments)
 #define STA_A     0x1       // Accessed
+
+#endif // _ASM_H_

@@ -1,4 +1,6 @@
-// This file contains definitions for the 
+#ifndef _MMU_H_
+#define _MMU_H_
+// This file contains definitions for the
 // x86 memory management unit (MMU).
 
 // Eflags register
@@ -94,7 +96,7 @@ struct segdesc {
 // | Page Directory |   Page Table   | Offset within Page  |
 // |      Index     |      Index     |                     |
 // +----------------+----------------+---------------------+
-//  \--- PDX(la) --/ \--- PTX(la) --/ 
+//  \--- PDX(la) --/ \--- PTX(la) --/
 
 // page directory index
 #define PDX(la)		(((uint)(la) >> PDXSHIFT) & 0x3FF)
@@ -213,4 +215,6 @@ struct gatedesc {
   (gate).p = 1;                                           \
   (gate).off_31_16 = (uint)(off) >> 16;                  \
 }
+
+#endif // _MMU_H_
 

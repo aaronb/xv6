@@ -1,3 +1,6 @@
+#ifndef _USER_H_
+#define _USER_H_
+
 struct stat;
 
 // system calls
@@ -23,7 +26,7 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 
-// ulib.c
+// user library functions (ulib.c)
 int stat(char*, struct stat*);
 char* strcpy(char*, char*);
 void *memmove(void*, void*, int);
@@ -36,3 +39,6 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
+
+#endif // _USER_H_
+
