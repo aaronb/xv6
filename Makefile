@@ -7,17 +7,57 @@
 #
 # http://www.gnu.org/software/make/manual/
 
+# Default make target
+.PHONY: all
+all: xv6.img fs.img
+
+################################################################################
+# Build options
+################################################################################
+
+# delete target if error building it
+.DELETE_ON_ERROR:
+
+# C compiler options
+# http://gcc.gnu.org/onlinedocs/gcc-4.4.6/gcc/Invoking-GCC.html
+CC = gcc
+# enable extra warnings
+CFLAGS += -Wall
+# treat warnings as errors
+CFLAGS += -Werror
+# produce debugging information for use by gdb
+CFLAGS += -ggdb
+
+# uncomment to enable optimizations. improves performance, but may make
+# debugging more difficult
+#CFLAGS += -O2
+
+# C Preprocessor
+CPP := cpp
+
+# Assembler options
+# http://sourceware.org/binutils/docs/as/Invoking.html
+AS := gcc
+ASFLAGS += -ggdb # produce debugging information for use by gdb
+
+# Linker options
+# http://sourceware.org/binutils/docs/ld/Options.html
+LD := ld
+
+OBJCOPY := objcopy
+
+OBJDUMP := objdump
 
 ################################################################################
 # Emulator Options
 ################################################################################
 
 # If the makefile can't find QEMU, specify its path here
-#QEMU =
+#QEMU :=
 
 # Try to infer the correct QEMU if not specified
 ifndef QEMU
-QEMU = $(shell if which qemu > /dev/null; \
+QEMU := $(shell if which qemu &> /dev/null; \
 	then echo qemu; exit; \
 	else \
 	qemu=/u/c/s/cs537-1/ta/tools/qemu; \
@@ -31,10 +71,10 @@ QEMU = $(shell if which qemu > /dev/null; \
 endif
 
 # try to generate a unique GDB port
-GDBPORT = $(shell expr `id -u` % 5000 + 25000)
+GDBPORT := $(shell expr `id -u` % 5000 + 25000)
 
 # QEMU's gdb stub command line changed in 0.11
-QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
+QEMUGDB := $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 	then echo "-gdb tcp::$(GDBPORT)"; \
 	else echo "-s -p $(GDBPORT)"; fi)
 
@@ -43,58 +83,49 @@ ifndef CPUS
 CPUS := 2
 endif
 
-QEMUOPTS = -hdb fs.img xv6.img -smp $(CPUS)
-
-# delete target if error building it
-.DELETE_ON_ERROR:
-
-include common.mk
-include kernel/makefile.mk
-include user/makefile.mk
-include tools/makefile.mk
-DEPS := $(KERNEL_DEPS) $(USER_DEPS) $(TOOLS_DEPS)
-CLEAN := $(KERNEL_CLEAN) $(USER_CLEAN) $(TOOLS_CLEAN) fs fs.img
-
+QEMUOPTS := -hdb fs.img xv6.img -smp $(CPUS)
 
 ################################################################################
 # Main Targets
 ################################################################################
+include kernel/makefile.mk
+include user/makefile.mk
+include tools/makefile.mk
+DEPS := $(KERNEL_DEPS) $(USER_DEPS) $(TOOLS_DEPS)
+CLEAN := $(KERNEL_CLEAN) $(USER_CLEAN) $(TOOLS_CLEAN) \
+	fs fs.img .gdbinit .bochsrc
 
-.PHONY: all clean distclean tags dvi html pdf ps \
-	run qemu qemu-nox qemu-gdb qemu-nox-gdb bochs depend \
-	kernel tools user
+.PHONY: clean distclean run depend qemu qemu-nox qemu-gdb qemu-nox-gdb bochs
 
-all: xv6.img fs.img
-
+# remove all generated files
 clean:
 	rm -rf $(CLEAN)
 
-distclean: clean
-	rm -f TAGS .gdbinit .bochsrc
-
-tags: TAGS
-TAGS: $(OBJS) bootother.S init.o
-	etags *.S *.c
-
 run: qemu
 
+# run xv6 in qemu
 qemu: fs.img xv6.img
 	$(QEMU) -serial mon:stdio $(QEMUOPTS)
 
+# run xv6 in qemu without a display (serial only)
 qemu-nox: fs.img xv6.img
 	$(QEMU) -nographic $(QEMUOPTS)
 
+# run xv6 in qemu in debug mode
 qemu-gdb: fs.img xv6.img .gdbinit
-	@echo "*** Now run 'gdb'." 1>&2
+	@echo "Now run 'gdb' from another terminal." 1>&2
 	$(QEMU) -serial mon:stdio $(QEMUOPTS) -S $(QEMUGDB)
 
+# run xv6 in qemu without a display (serial only) in debug mode
 qemu-nox-gdb: fs.img xv6.img .gdbinit
-	@echo "*** Now run 'gdb'." 1>&2
+	@echo "Now run 'gdb' from another terminal." 1>&2
 	$(QEMU) -nographic $(QEMUOPTS) -S $(QEMUGDB)
 
+# run xv6 in bochs
 bochs: fs.img xv6.img .bochsrc
 	bochs -q
 
+# generate dependency files
 depend: $(DEPS)
 
 ################################################################################
@@ -102,7 +133,6 @@ depend: $(DEPS)
 ################################################################################
 
 -include $(DEPS)
-
 
 %.asm: %.o
 	$(OBJDUMP) -S $< > $@
@@ -113,7 +143,7 @@ depend: $(DEPS)
 fs:
 	mkdir -p fs
 
-fs/%: user/bin/%
+fs/%: user/bin/% | fs
 	cp $< $@
 
 fs/README: README | fs

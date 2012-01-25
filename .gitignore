@@ -23,12 +23,19 @@ xv6.img
 xv6memfs.img
 
 # other generated files
-bootother.out
-initcode.out
-vectors.S
+bootother
+initcode
 TAGS
-xv6.pdf
-xv6.ps
-fmt/
 .gdbinit
+fs/
+kernel/vectors.S
+kernel/bootblock
+kernel/bootblock.out
+kernel/bootother.out
+kernel/initcode.out
+kernel/kernel
+bootother
+initcode
+user/bin/
+tools/mkfs
 
