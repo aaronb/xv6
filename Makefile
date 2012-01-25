@@ -134,7 +134,9 @@ depend: $(DEPS)
 
 dist: clean
 	mkdir -p dist/xv6
-	cp -r include kernel tools user FILES Makefile README .gitignore dist/xv6/
+	git describe --long > version
+	cp -r version include kernel tools user FILES Makefile \
+		README .gitignore dist/xv6/
 	cd dist && tar -czf xv6.tar.gz xv6
 	mv dist/xv6.tar.gz .
 	rm -rf dist

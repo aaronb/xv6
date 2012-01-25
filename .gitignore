@@ -38,4 +38,5 @@ bootother
 initcode
 user/bin/
 tools/mkfs
+version
 
