@@ -1459,9 +1459,8 @@ bsstest(void)
 void
 bigargtest(void)
 {
-  int pid, ppid;
+  int pid;
 
-  ppid = getpid();
   pid = fork();
   if(pid == 0){
     char *args[32+1];
