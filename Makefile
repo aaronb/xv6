@@ -57,7 +57,7 @@ OBJDUMP := objdump
 
 # Try to infer the correct QEMU if not specified
 ifndef QEMU
-QEMU := $(shell if which qemu &> /dev/null; \
+QEMU := $(shell if which qemu 1> /dev/null 2> /dev/null; \
 	then echo qemu; exit; \
 	else \
 	qemu=/u/c/s/cs537-1/ta/tools/qemu; \
