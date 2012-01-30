@@ -77,7 +77,7 @@ argstr(int n, char **pp)
   return fetchstr(proc, addr, pp);
 }
 
-// syscall function declarations moved to syscall.h so compiler
+// syscall function declarations moved to sysfunc.h so compiler
 // can catch definitions that don't match
 
 // array of function pointers to handlers for all the syscalls
